@@ -1,0 +1,192 @@
+@typeparam TItem
+@inherits BaseDataGridComponent
+@using Blazorise.Extensions
+@* there are two CascadingValue because one is used only to define columns, and the other is to build rows based on those columns *@
+@* This one is to build rows *@
+<CascadingValue Value="@this" IsFixed="true">
+    @if ( IsPagerVisible && ( PagerPosition == DataGridPagerPosition.Top || PagerPosition == DataGridPagerPosition.TopAndBottom ) )
+    {
+        <_DataGridPagination TItem="TItem" PaginationContext="@PaginationContext" PaginationTemplates="@PaginationTemplates" OnPaginationItemClick="@OnPaginationItemClick" New="@OnNewCommand" Edit="@OnEditCommand" Delete="@OnDeleteCommand" SelectedRow="@SelectedRow" ClearFilter="@OnClearFilterCommand" />
+    }
+    <Table @ref="@tableRef" ElementId="@ElementId" Class="@ClassNames" Style="@Style" Margin="@Margin" Padding="@Padding" Striped="@Striped" Bordered="@Bordered" Borderless="@Borderless" Hoverable="@Hoverable" Narrow="@Narrow" Responsive="@Responsive">
+        <TableHeader>
+            @if ( ShowCaptions )
+            {
+                <TableRow Class="@HeaderRowStyling?.Class" Style="@HeaderRowStyling?.Style" Background="@(HeaderRowStyling?.Background ?? Background.None)" Color="@(HeaderRowStyling?.Color ?? Color.None)">
+                    @foreach ( var column in DisplayableColumns )
+                    {
+                        @if ( column.ColumnType == DataGridColumnType.Command )
+                        {
+                            @if ( IsCommandVisible )
+                            {
+                                <TableHeaderCell Class="@column.HeaderCellClass" Style="@column.BuildHeaderCellStyle()" TextAlignment="@column.HeaderTextAlignment">
+                                    @if ( CanInsertNewItem && editState != DataGridEditState.New )
+                                    {
+                                        <_DataGridNewCommand TItem="TItem" New="@OnNewCommand" />
+                                    }
+                                </TableHeaderCell>
+                            }
+                        }
+                        else if ( column.ColumnType == DataGridColumnType.MultiSelect )
+                        {
+                            @if ( MultiSelect )
+                            {
+                                <TableHeaderCell Class="@column.HeaderCellClass" Style="@column.BuildHeaderCellStyle()" TextAlignment="@column.HeaderTextAlignment">
+                                    <_DataGridMultiSelectAll TItem="TItem" MultiSelectAll="@OnMultiSelectAll" IsIndeterminate="@IsMultiSelectAllIndeterminate"></_DataGridMultiSelectAll>
+                                </TableHeaderCell>
+                            }
+                        }
+                        else
+                        {
+                            <TableHeaderCell Class="@column.HeaderCellClass" Style="@($"{column.HeaderCellStyle}{(Sortable && column.Sortable ? "; cursor: pointer" : "")}{(column.Width != null ? $"; width: {column.Width}" : "")}".TrimStart( ' ', ';' ))" Clicked="@(async () => await OnSortClicked( column ) )" TextAlignment="@column.HeaderTextAlignment">
+                                @if ( column.ShowCaption )
+                                {
+                                    @if ( column.CaptionTemplate != null )
+                                    {
+                                        @column.CaptionTemplate( column )
+                                    }
+                                    else
+                                    {
+                                        @column.Caption
+                                    }
+                                }
+                                @if ( Sortable && column.Sortable && column.CurrentDirection != SortDirection.None )
+                                {
+                                    @if ( column.SortDirectionTemplate != null )
+                                    {
+                                        @column.SortDirectionTemplate( column.CurrentDirection )
+                                    }
+                                    else
+                                    {
+                                        <Icon Name="@(column.CurrentDirection == SortDirection.Descending ? IconName.SortDown : IconName.SortUp)" />
+                                    }
+                                }
+                            </TableHeaderCell>
+                        }
+                    }
+                </TableRow>
+            }
+            @if ( Filterable )
+            {
+                <TableRow Class="@FilterRowStyling?.Class" Style="@FilterRowStyling?.Style" Background="@(FilterRowStyling?.Background ?? Background.None)" Color="@(FilterRowStyling?.Color ?? Color.None)">
+                    @foreach ( var column in DisplayableColumns )
+                    {
+                        @if ( !column.Filterable )
+                        {
+                            <TableHeaderCell Class="@column.FilterCellClass" Style="@column.BuildFilterCellStyle()"></TableHeaderCell>
+                            continue;
+                        }
+
+                        @if ( column.ColumnType == DataGridColumnType.Command )
+                        {
+                            @if ( IsCommandVisible )
+                            {
+                                // since Clear Filter is located in the command column it can be visible onle when Edit is enabled
+                                <TableHeaderCell Class="@column.FilterCellClass" Style="@column.BuildFilterCellStyle()">
+                                    <_DataGridClearFilterCommand TItem="TItem" ClearFilter="@OnClearFilterCommand" />
+                                </TableHeaderCell>
+                            }
+                        }
+                        else if ( column.ColumnType == DataGridColumnType.MultiSelect )
+                        {
+                            @if ( MultiSelect )
+                            {
+                                <TableHeaderCell Class="@column.FilterCellClass" Style="@column.BuildFilterCellStyle()">
+                                    @if ( column.FilterTemplate != null )
+                                    {
+                                        @(column.FilterTemplate( column.Filter ))
+                                    }
+                                </TableHeaderCell>
+                            }
+                        }
+                        else
+                        {
+                            <TableHeaderCell Class="@column.FilterCellClass" Style="@column.BuildFilterCellStyle()">
+                                @if ( column.FilterTemplate != null )
+                                {
+                                    @(column.FilterTemplate( column.Filter ))
+                                }
+                                else
+                                {
+                                    <TextEdit Text="@column.Filter.SearchValue" TextChanged="@(async (newValue) => await OnFilterChanged(column, newValue))" />
+                                }
+                            </TableHeaderCell>
+                        }
+                    }
+                </TableRow>
+            }
+        </TableHeader>
+        <TableBody>
+            @if ( IsNewItemInGrid )
+            {
+                <_DataGridRowEdit TItem="TItem" Item="@editItem" Columns="@Columns" CellValues="@editItemCellValues" Save="@OnSaveCommand" Cancel="@OnCancelCommand" EditMode="@EditMode" />
+            }
+            @if ( IsDisplayDataVisible )
+            {
+                @foreach ( var item in DisplayData )
+                {
+                    @if ( Editable && editState == DataGridEditState.Edit && EditMode != DataGridEditMode.Popup && item.IsEqual( editItem ) )
+                    {
+                        <_DataGridRowEdit TItem="TItem" Item="@editItem" Columns="@Columns" CellValues="@editItemCellValues" Save="@OnSaveCommand" Cancel="@OnCancelCommand" EditMode="@EditMode" />
+                    }
+                    else
+                    {
+                        <_DataGridRow @key="@item" TItem="TItem" Item="@item" Columns="@DisplayableColumns" HoverCursor="@(RowHoverCursor?.Invoke(item) ?? Cursor.Pointer)" Edit="@OnEditCommand" Delete="@OnDeleteCommand" Save="@OnSaveCommand" Cancel="@OnCancelCommand" Selected="@OnSelectedCommand" Clicked="@OnRowClickedCommand" DoubleClicked="@OnRowDoubleClickedCommand" MultiSelect="OnMultiSelectCommand" />
+                        @if ( DetailRowTemplate != null )
+                        {
+                            var canShow = DetailRowTrigger?.Invoke( item ) ?? true;
+
+                            @if ( canShow )
+                            {
+                                <_DataGridDetailRow TItem="TItem" Item="@item" Columns="@Columns">
+                                    @DetailRowTemplate( item )
+                                </_DataGridDetailRow>
+                            }
+                        }
+                    }
+                }
+            }
+            @if ( IsEmptyTemplateVisible )
+            {
+                <_DataGridFullColumnSpanRow TItem="TItem" Columns="@Columns">
+                    @EmptyTemplate
+                </_DataGridFullColumnSpanRow>
+            }
+            @if ( IsLoadingTemplateVisible )
+            {
+                <_DataGridFullColumnSpanRow TItem="TItem" Columns="@Columns">
+                    @LoadingTemplate
+                </_DataGridFullColumnSpanRow>
+            }
+        </TableBody>
+        @if ( HasAggregates )
+        {
+            <TableFooter>
+                <_DataGridAggregateRow TItem="TItem" Aggregates="@Aggregates" Columns="@DisplayableColumns" Class="@GroupRowStyling?.Class" Style="@GroupRowStyling?.Style" Background="@(GroupRowStyling?.Background ?? Background.None)" Color="@(GroupRowStyling?.Color ?? Color.None)" />
+            </TableFooter>
+        }
+    </Table>
+    @if ( IsPagerVisible && ( PagerPosition == DataGridPagerPosition.Bottom || PagerPosition == DataGridPagerPosition.TopAndBottom ) )
+    {
+        <_DataGridPagination TItem="TItem" PaginationContext="@PaginationContext" PaginationTemplates="@PaginationTemplates" OnPaginationItemClick="@OnPaginationItemClick" New="@OnNewCommand" Edit="@OnEditCommand" Delete="@OnDeleteCommand" SelectedRow="@SelectedRow" ClearFilter="@OnClearFilterCommand" />
+    }
+    @if ( editItem != null && EditMode == DataGridEditMode.Popup )
+    {
+        <_DataGridModal TItem="TItem"
+                        TitleTemplate="@PopupTitleTemplate"
+                        EditItem="@editItem"
+                        EditItemCellValues="@editItemCellValues"
+                        Columns="@Columns"
+                        PopupVisible="@PopupVisible"
+                        PopupSize="@PopupSize"
+                        EditState="@editState"
+                        Save="@OnSaveCommand"
+                        Cancel="@OnCancelCommand" />
+    }
+</CascadingValue>
+@* This one is to hold information about columns *@
+<CascadingValue Value="@this" IsFixed="true">
+    @DataGridAggregates
+    @DataGridColumns
+    @ChildContent
+</CascadingValue>

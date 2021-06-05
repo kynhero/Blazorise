@@ -1,0 +1,19 @@
+﻿@inherits Blazorise.Addons
+<CascadingValue Value="@this" IsFixed="true">
+    @if ( ParentIsHorizontal )
+    {
+        <Blazorise.FieldBody>
+            <div class="field is-expanded">
+                <div id="@ElementId" class="@ClassNames" style="@StyleNames" @attributes="@Attributes">
+                    @ChildContent
+                </div>
+            </div>
+        </Blazorise.FieldBody>
+    }
+    else
+    {
+        <div id="@ElementId" class="@ClassNames" style="@StyleNames" @attributes="@Attributes">
+            @ChildContent
+        </div>
+    }
+</CascadingValue>

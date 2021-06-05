@@ -1,0 +1,75 @@
+@typeparam TItem
+@inherits _BaseDataGridCell<TItem>
+@if ( Column.EditTemplate != null )
+{
+    @Column.EditTemplate( CellEditContext )
+}
+else
+{
+    @if ( HasValidator || HasValidationPattern )
+    {
+        @if ( Column.ColumnType == DataGridColumnType.Numeric
+            || Column.ColumnType == DataGridColumnType.Check
+            || Column.ColumnType == DataGridColumnType.Date )
+        {
+            var type = Column.GetValueType();
+
+            @if ( HasValidationPattern )
+            {
+                <Validation UsePattern="@HasValidationPattern">
+                    <_DataGridCellEditValidation ValueType="@type" CellEditContext="CellEditContext" Readonly="@Column.Readonly" CellValueChanged="@CellValueChanged" ShowValidationFeedback="@ShowValidationFeedback" ValidationPattern="@ValidationPattern" />
+                </Validation>
+            }
+            else
+            {
+                <Validation Validator="@Validator">
+                    <_DataGridCellEditValidation ValueType="@type" CellEditContext="CellEditContext" Readonly="@Column.Readonly" CellValueChanged="@CellValueChanged" ShowValidationFeedback="@ShowValidationFeedback" />
+                </Validation>
+            }
+        }
+        else
+        {
+            @if ( HasValidationPattern )
+            {
+                <Validation UsePattern="@HasValidationPattern">
+                    <TextEdit Text="@CellEditContext.CellValue?.ToString()" TextChanged="@(( v ) => CellEditContext.CellValue = v)" ReadOnly="@Column.Readonly" Pattern="@ValidationPattern">
+                        <Feedback>
+                            @if ( ShowValidationFeedback )
+                            {
+                                <ValidationError />
+                            }
+                        </Feedback>
+                    </TextEdit>
+                </Validation>
+            }
+            else
+            {
+                <Validation Validator="@Validator">
+                    <TextEdit Text="@CellEditContext.CellValue?.ToString()" TextChanged="@(( v ) => CellEditContext.CellValue = v)" ReadOnly="@Column.Readonly">
+                        <Feedback>
+                            @if ( ShowValidationFeedback )
+                            {
+                                <ValidationError />
+                            }
+                        </Feedback>
+                    </TextEdit>
+                </Validation>
+            }
+        }
+    }
+    else
+    {
+        @if ( Column.ColumnType == DataGridColumnType.Numeric
+            || Column.ColumnType == DataGridColumnType.Check
+            || Column.ColumnType == DataGridColumnType.Date )
+        {
+            var type = Column.GetValueType();
+
+            <_DataGridCellEdit Item="@Item" ValueType="@type" CellEditContext="CellEditContext" Readonly="@Column.Readonly" CellValueChanged="@CellValueChanged" />
+        }
+        else
+        {
+            <TextEdit Text="@CellEditContext.CellValue?.ToString()" TextChanged="@(( v ) => CellEditContext.CellValue = v)" ReadOnly="@Column.Readonly" />
+        }
+    }
+}

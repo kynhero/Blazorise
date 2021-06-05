@@ -1,0 +1,13 @@
+﻿@inherits Blazorise.BarDropdown
+<CascadingValue Value="@this" IsFixed="true">
+    <CascadingValue Value="@State">
+        <CascadingValue Value="@SubMenuId" Name="SubMenuId">
+            <li id="@ElementId" class="@ClassNames" style="@StyleNames" role="menuitem" @attributes="@Attributes">
+                @ChildContent
+            </li>
+        </CascadingValue>
+    </CascadingValue>
+</CascadingValue>
+@code{
+    string SubMenuId => $"SubMenu_{ElementId}";
+}

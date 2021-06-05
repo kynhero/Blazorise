@@ -1,0 +1,50 @@
+﻿@using Microsoft.AspNetCore.Components.RenderTree
+<div id="test-selector">
+    Select test:
+    <select @bind=@SelectedComponentTypeName>
+        <option value="none">Choose...</option>
+        <option value="BasicTestApp.Client.ElementIdComponent">ElementId</option>
+        <option value="BasicTestApp.Client.TextOnlyComponent">Plain text</option>
+        <option value="BasicTestApp.Client.ButtonComponent">Button</option>
+        <option value="BasicTestApp.Client.ButtonOnlyComponent">ButtonOnly</option>
+        <option value="BasicTestApp.Client.DropdownComponent">Dropdown</option>
+        <option value="BasicTestApp.Client.NumericEditComponent">NumericEditComponent</option>
+        <option value="BasicTestApp.Client.TextEditComponent">TextEdit</option>
+        <option value="BasicTestApp.Client.SelectComponent">SelectComponent</option>
+        <option value="BasicTestApp.Client.SelectNavigationsComponent">SelectNavigationsComponent</option>
+        <option value="BasicTestApp.Client.ValidateNumericEditComponent">ValidateNumericEditComponent</option>
+        <option value="BasicTestApp.Client.ValidateTextEditComponent">ValidateTextEditComponent</option>
+        <option value="BasicTestApp.Client.ValidateSelectComponent">ValidateSelectComponent</option>
+        <option value="BasicTestApp.Client.ValidateAnnotationsComponent">ValidateAnnotationsComponent</option>
+        <option value="BasicTestApp.Client.ButtonComponent">ButtonComponent</option>
+        <option value="BasicTestApp.Client.CloseButtonComponent">CloseButtonComponent</option>
+        <option value="BasicTestApp.Client.TabsComponent">TabsComponent</option>
+        <option value="BasicTestApp.Client.RadioGroupComponent">RadioGroupComponent</option>
+    </select>
+
+    @if ( SelectedComponentType != null )
+    {
+        <span id="source-info"><code><tt>@(SelectedComponentType.Name.Replace( ".", "/" )).cshtml</tt></code></span>
+    }
+    <hr />
+</div>
+
+<app>
+    @((RenderFragment)RenderSelectedComponent)
+</app>
+
+@code {
+    string SelectedComponentTypeName { get; set; } = "none";
+
+    Type SelectedComponentType
+        => SelectedComponentTypeName == "none" ? null : Type.GetType( SelectedComponentTypeName );
+
+    void RenderSelectedComponent( RenderTreeBuilder builder )
+    {
+        if ( SelectedComponentType != null )
+        {
+            builder.OpenComponent( 0, SelectedComponentType );
+            builder.CloseComponent();
+        }
+    }
+}
